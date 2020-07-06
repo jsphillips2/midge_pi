@@ -1,0 +1,46 @@
+
+
+\section*{Methods}
+
+I fit a photosynthesis-irradiance curve to of the following form:
+%
+\begin{equation} \label{eq:fit}
+  \Delta \text{DO}_i = 
+    \beta_i \times \text{tanh}\left(\frac{\alpha_i} {\beta_i} \times \text{PAR}\right)
+      - \rho_i + \epsilon_i
+\end{equation}
+%
+where $\Delta \text{DO}_i$ is the hourly change in dissovled oxygen 
+in experimental unit $i$, 
+$\beta_i$ and $\alpha_i$ are parameters of the PI curve as defined in equation \ref{eq:pi},
+$\rho_i$ is total respiration of organisms in the sediment,
+and $\epsilon_i$ is the residual error.
+I modeled the effects of sediment treatment and experimental day as
+%
+\begin{equation} \label{eq:lm}
+\begin{split}
+\beta_i &\sim 1 + \text{day} \times \text{treatment} \\
+\alpha_i &\sim 1 + \text{day} \times \text{treatment} \\
+\rho_i &\sim 1 + \text{day} \times \text{treatment}
+\end{split}
+\end{equation}
+%
+using the "formula" notation for linear models, 
+where `1' denotes the intercept,
+and `$\times$' denotes both main effects and interactions.
+
+To assess ecosystem engineering effects on different aspects photosynthesis, 
+I compared the full model reduced versions that omitted main effects and interactions from
+the formulas of either $\beta_i$ and $\alpha_i$.
+I removed main effects and interactions involving the sediment treatments together
+both to reduce the number of models and because of the a prior expection that 
+the treamtent effects is unlikely to remain constant through time.
+Simiarly, the main effects of interactions of day and sediment treatment on $\rho_i$
+were included in all models to reduce the number of alternatives and because 
+Phillips et al. (2019) found strong evidence for both the main effects and interactions on
+$\rho_i$.
+I compared the alternative models using the information criterion associated 
+with Leave-one-out cross validation (``LOOIC''), 
+which is conceptually similar to the  Akaike Information Criterion (AIC).
+The models were fit using Stan run from R using the ``rstan'' package.
+

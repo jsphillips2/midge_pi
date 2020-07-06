@@ -1,0 +1,54 @@
+\section*{Introduction}
+
+While there are many parameterizations of PI, 
+one that has been particularly popular in recent work is of the following form:
+%
+\begin{equation} \label{eq:pi}
+  \text{GPP} = 
+    \beta \times \text{tanh}\left(\frac{\alpha} {\beta} \times \text{PAR}\right)
+\end{equation}
+%
+where $\text{PAR}$ is the photosynthetically active irradiance,
+$\beta$ is the maximum GPP attained under conditions where light is not limiting,
+and $\alpha$ is the sensitivity of GPP to increases in light when light is limiting.
+One advantage of this parameterization is that the parameters have a direct 
+biological interpretation. 
+The maximum of the PI curve represents the peak photosynthetic potential,
+which increases with factors such as standing biomass and
+availability of resources that become limiting when light is in excess (e.g., nutrients).
+In contrast, the sensitivity of GPP to increases in light represents the ability 
+of primary producers to exploit the available light when it is the primary limiting factor,
+which increases with factors such as the concentration of photosynthetic pigments or the 
+geometry of the substrate.
+Despite their different interpretations, increases in $\beta$ and $\alpha$ both increase
+GPP at a given light level.
+Furthermore, they both have the potential to increase in response to 
+ecosystem engineering.
+For example, substrate structurring provided by benthic invertebrates can increase
+the surface area for biofilm growth, 
+thereby ameliorating competition for light and increasing the photosynthetic 
+biomass under high light conditions.
+
+While equation (\ref{eq:pi}) makes clear the influence of different aspects of photosynthesis
+on the shape of the curve, 
+another important consideration is how the shape of this curve relates to ambient light
+conditions, which is captured in the concept of "saturation". 
+Often this is expressed as the half-saturation level 
+(i.e., the denominator constant in the classical Michaelis-Menten curve), 
+which can be inferred from (\ref{eq:pi}) as
+%
+\begin{equation} \label{eq:sat}
+  \text{PAR}_{\text{half~sat}} = 
+    \frac{\beta} {\alpha} \times \text{tanh}^{-1} \left(\frac{1}{2}\right)
+\end{equation}
+%
+Equation \ref{eq:sat} shows that $\beta$ and $\alpha$ have opposite effects on the 
+half-saturation level, 
+despite having coindiciding effects on overall GPP.
+This in turn means that variations in $\beta$ and $\alpha$ have 
+different implications for how primary production responds to spatiotemporal variation 
+in light conditions.
+Therefore,
+understanding the effects of aquatic ecosystem engineers on benthic primary production
+requires the separation of their potential effects on different aspects of the PI curve.
+
