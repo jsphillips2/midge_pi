@@ -30,6 +30,8 @@ model_fn <- function(b_, r_, a_, dd_, dd_sum_) {
                      x_r = x_r_,
                      par = dd$par,
                      rateo2 = dd$rateo2,
+                     n_cores = max(dd$core),
+                     core = dd$core,
                      n_sum = n_sum_,
                      x_sum_b = x_sum_b_,
                      x_sum_a = x_sum_a_,

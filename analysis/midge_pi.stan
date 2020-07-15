@@ -18,6 +18,8 @@ data {
   matrix[n_obs, xs[3]] x_r;
   real par[n_obs];
   real rateo2[n_obs];
+  int n_cores;
+  int core[n_obs];
   int n_sum;
   matrix[n_sum, xs[1]] x_sum_b;
   matrix[n_sum, xs[2]] x_sum_a;
@@ -68,6 +70,8 @@ parameters {
   vector[xs[1]] coef_b;
   vector[xs[2]] coef_a;
   vector[xs[3]] coef_r;
+  real ran[n_cores];
+  real<lower=0> sig_ran;
   real<lower=0> sig_res;
   
 }
@@ -93,7 +97,7 @@ transformed parameters {
     r[n] = exp(dot_product(coef_r, x_r[n,]));
     gpp_z[n] = b[n] * tanh((a[n] / b[n]) * l[n]);
     nep_z[n] = b[n] * tanh((a[n] / b[n]) * l[n]) - r[n];
-    y_pred[n] = nep_z[n] - mu/tau;
+    y_pred[n] = nep_z[n] - mu/tau + sig_ran * ran[core[n]];
   }
   
 }
@@ -108,7 +112,9 @@ model {
   coef_b ~ normal(0, 1); 
   coef_a ~ normal(0, 1); 
   coef_r ~ normal(0, 1); 
-  sig_res ~ exponential(2);
+  ran ~ normal(0, 1);
+  sig_ran ~ gamma(1.5, 1.5 / 0.5);
+  sig_res ~ gamma(1.5, 1.5 / 0.5);
   
   // Likelihood
   y ~ normal(y_pred, sig_res);
