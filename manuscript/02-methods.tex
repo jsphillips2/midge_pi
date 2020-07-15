@@ -2,11 +2,11 @@
 
 \section*{Methods}
 
-I fit a photosynthesis-irradiance curve to of the following form:
+I fit a PI curve of the following form:
 %
 \begin{equation} \label{eq:fit}
   \Delta \text{DO}_i = 
-    \beta_i \times \text{tanh}\left(\frac{\alpha_i} {\beta_i} \times \text{PAR}\right)
+    \beta_i \times \text{tanh}\left(\frac{\alpha_i} {\beta_i} \times \text{PAR}_i\right)
       - \rho_i + \epsilon_i
 \end{equation}
 %
@@ -15,6 +15,9 @@ in experimental unit $i$,
 $\beta_i$ and $\alpha_i$ are parameters of the PI curve as defined in equation \ref{eq:pi},
 $\rho_i$ is total respiration of organisms in the sediment,
 and $\epsilon_i$ is the residual error.
+The residuals were modeld with Guassian distributions 
+separated into observation- and mesocosm-level components
+to account for repeated measurement of mesocosms across the two sampling days.
 I modeled the effects of sediment treatment and experimental day as
 %
 \begin{equation} \label{eq:lm}
@@ -25,22 +28,30 @@ I modeled the effects of sediment treatment and experimental day as
 \end{split}
 \end{equation}
 %
-using the "formula" notation for linear models, 
-where `1' denotes the intercept,
-and `$\times$' denotes both main effects and interactions.
+using the ``formula'' notation for linear models, 
+where ``1'' denotes the intercept,
+and ``$\times$'' denotes both main effects and interactions.
+Prior to fitting the model, I z-scored 
+$\Delta \text{DO}_i$ and divided $\text{PAR}_i$ by the maximum observed PAR 
+to improve numerical stability of the model fitting; 
+model estimates were then back-scaled accordingly.
+I fit the model with Stan run from R using the ``rstan'' package,
+with Guassian(0, 1) priors for the linear predictor coefficients  
+and Gamma(1.5, 3) priors for residual standard deviations;
+these priors were weakly-informative relative to the scale of the standardized data.
 
-To assess ecosystem engineering effects on different aspects photosynthesis, 
-I compared the full model reduced versions that omitted main effects and interactions from
-the formulas of either $\beta_i$ and $\alpha_i$.
-I removed main effects and interactions involving the sediment treatments together
-both to reduce the number of models and because of the a prior expection that 
-the treamtent effects is unlikely to remain constant through time.
-Simiarly, the main effects of interactions of day and sediment treatment on $\rho_i$
+To assess ecosystem engineering effects on different aspects primary production, 
+I compared the full model to reduced versions 
+that omitted main effects and interactions from the formulas 
+of either $\beta_i$ and $\alpha_i$.
+I removed main effects of sediment treatment and associated interactions with sample day 
+together to reduce the number of models and because of the a prior expection that 
+the treamtent effects were unlikely to remain constant through time.
+Main effects and interactions associated with sediment treatment for $\rho_i$
 were included in all models to reduce the number of alternatives and because 
-Phillips et al. (2019) found strong evidence for both the main effects and interactions on
-$\rho_i$.
+previous analysis of these data 
+found strong evidence for both the main effects and interactions on $\rho_i$.
 I compared the alternative models using the information criterion associated 
-with Leave-one-out cross validation (``LOOIC''), 
-which is conceptually similar to the  Akaike Information Criterion (AIC).
-The models were fit using Stan run from R using the ``rstan'' package.
-
+with Leave-one-out cross validation (``LOOIC'') using the ``loo'' package.
+LOOIC is conceptually similar to the  Akaike Information Criterion (AIC) 
+and is closely related to the Widely Application Information Criterion (WAIC).
