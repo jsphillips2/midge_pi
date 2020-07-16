@@ -29,6 +29,18 @@ dd = data %>%
   na.omit() %>%
   filter(rateo2 > -3)
 
+# data frame for summary
+dd_sum <- dd %>%
+  mutate(id = interaction(time, midge)) %>%
+  split(.$id) %>%
+  lapply(function(x) {
+    x %>% 
+      tidyr::expand(par = seq(min(par), max(par), length.out = 100)) %>%
+      mutate(time = unique(x$time),
+             midge = unique(x$midge))
+  }) %>%
+  bind_rows()
+
 
 
 # import model fits
@@ -72,7 +84,8 @@ theme_set(theme_bw() %+replace%
                   axis.title = element_text(size =10),
                   axis.title.y = element_text(angle = 90, margin=margin(0,10,0,0)),
                   axis.title.x = element_text(margin = margin(10,0,0,0)),
-                  panel.spacing = unit(0.1, "lines")))
+                  panel.spacing = unit(0.1, "lines"),
+                  axis.ticks = element_line(size = 0.25)))
 
 
 
@@ -152,7 +165,8 @@ p1 <- dd %>%
   theme(legend.position = c(0.875, 0.75),
         legend.text = element_text(margin = margin(l = -6)),
         legend.key.size = unit(0.7, "lines"),
-        legend.spacing.y = unit(0, "lines"))+
+        legend.spacing.y = unit(0, "lines"),
+        panel.border = element_rect(size = 0.25))+
   guides(fill = guide_legend(override.aes = list(size = 2)))
 
 p1
@@ -195,7 +209,11 @@ p2 <- sats %>%
   facet_wrap(~Day, nrow = 2, labeller=label_parsed)+
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0, size = 0.5)+
   geom_line(size = 0.5)+
-  geom_point(size = 1.75)+
+  geom_point(aes(fill = Model), 
+             size = 1.75, 
+             shape = 21, 
+             color = "black",
+             stroke = 0.3)+
   scale_x_continuous("Sediment Treatment",
                      limits = c(-0.5, 1.5),
                      breaks = c(0, 1),
@@ -207,10 +225,16 @@ p2 <- sats %>%
                      labels = c(bquote(beta),
                                 bquote(alpha),
                                 bquote(beta~and~alpha)))+
+  scale_fill_manual("",
+                     values = c("firebrick","dodgerblue","goldenrod2"),
+                     labels = c(bquote(beta),
+                                bquote(alpha),
+                                bquote(beta~and~alpha)))+
   theme(legend.position = c(0.80, 0.89),
         legend.text = element_text(margin = margin(l = -6)),
         legend.key.size = unit(0.9, "lines"),
-        legend.spacing.y = unit(0, "lines"))+
+        legend.spacing.y = unit(0, "lines"),
+        panel.border = element_rect(size = 0.25))+
   guides(color = guide_legend(override.aes = list(size = 2, linetype = 0)))
 
 p2
@@ -290,7 +314,8 @@ p3 <- ben_par %>%
         legend.text = element_text(margin = margin(l = -10)),
         legend.spacing.x = unit(1, "lines"),
         legend.spacing.y = unit(0, "lines"),
-        axis.title.y.right = element_text(angle = -90, margin=margin(0,0,0,15)))
+        axis.title.y.right = element_text(angle = -90, margin=margin(0,0,0,15)),
+        panel.border = element_rect(size = 0.25))
 p3
 
 # ggsave(file = "analysis/figures/fig_3.pdf",
