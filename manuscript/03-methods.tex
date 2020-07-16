@@ -22,22 +22,25 @@ I modeled the effects of sediment treatment and experimental day as
 %
 \begin{equation} \label{eq:lm}
 \begin{split}
-\beta_i &\sim 1 + \text{day} \times \text{treatment} \\
-\alpha_i &\sim 1 + \text{day} \times \text{treatment} \\
-\rho_i &\sim 1 + \text{day} \times \text{treatment}
+\text{log}(\beta_i) &\sim 1 + \text{day}_i \times \text{treatment}_i \\
+\text{log}(\alpha_i) &\sim 1 + \text{day}_i \times \text{treatment}_i \\
+\text{log}(\rho_i) &\sim 1 + \text{day}_i \times \text{treatment}_i
 \end{split}
 \end{equation}
 %
 using the ``formula'' notation for linear models, 
 where ``1'' denotes the intercept,
 and ``$\times$'' denotes both main effects and interactions.
+Specifying the linear predictor on a log-scale ensured that the parameters 
+of the PI curve in equation \ref{eq:fit} were positive.
 Prior to fitting the model, I z-scored 
 $\Delta \text{DO}_i$ and divided $\text{PAR}_i$ by the maximum observed PAR 
 to improve numerical stability of the model fitting; 
 model estimates were then back-scaled accordingly.
-I fit the model with Stan run from R using the ``rstan'' package,
-with Guassian(0, 1) priors for the linear predictor coefficients  
-and Gamma(1.5, 3) priors for residual standard deviations;
+I fit the model with Bayesin approach using Stan \citep{carpenter2017}
+run from R using the ``rstan'' package \citep{stan2018} in R 4.0.0 \citep{r}.
+The model was specified with Guassian(0, 1) priors for the linear predictor coefficients  
+and Gamma(1.5, 3) priors for residual standard deviations \citep{chung2015};
 these priors were weakly-informative relative to the scale of the standardized data.
 
 To assess ecosystem engineering effects on different aspects primary production, 
