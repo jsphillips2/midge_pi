@@ -64,7 +64,7 @@ model_lab <- tibble(model = c("both.rds",
                     Model = c("beta~and~alpha",
                               "beta",
                               "alpha",
-                              "neither")%>% 
+                              "neither") %>% 
                       factor(levels = c("beta",
                                         "alpha",
                                         "beta~and~alpha",
@@ -102,7 +102,10 @@ nep_sum <- lapply(model_names, function(x) {
       mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
              id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
       filter(name %in% c("nep_sum")) %>%
-      select(id, mean, sd) %>%
+      rename(lo = `16%`,
+             mi = `50%`,
+             hi = `84%`) %>%
+      select(id, lo, mi, hi) %>%
       unique() %>%
       left_join(dd_sum %>%
                   mutate(id = row_number())) %>%
@@ -125,15 +128,15 @@ p1 <- dd %>%
   geom_hline(yintercept = 0, size = 0.1)+
   geom_ribbon(data = nep_sum %>% filter(model == "both.rds"), 
               aes(par,
-                  ymin = mean - sd,
-                  ymax = mean + sd,
+                  ymin = lo,
+                  ymax = hi,
                   group = interaction(Model, Sediment)),
               fill = "goldenrod2",
               alpha = 0.2)+
   geom_ribbon(data = nep_sum %>% filter(model == "midge_a.rds"), 
               aes(par,
-                  ymin = mean - sd,
-                  ymax = mean + sd,
+                  ymin = lo,
+                  ymax = hi,
                   group = interaction(Model, Sediment)),
               fill = "dodgerblue",
               alpha = 0.3)+
@@ -142,14 +145,14 @@ p1 <- dd %>%
              size = 1.3)+
   geom_ribbon(data = nep_sum %>% filter(model == "midge_b.rds"), 
               aes(par,
-                  ymin = mean - sd,
-                  ymax = mean + sd,
+                  ymin = lo,
+                  ymax = hi,
                   group = interaction(Model, Sediment)),
               fill = "firebrick",
               alpha = 0.3)+
   geom_line(data = nep_sum %>% filter(model != "none.rds"), 
             aes(par,
-                mean, 
+                mi, 
                 linetype = Sediment,
                 color = model),
             size = 0.4)+
@@ -185,7 +188,10 @@ sats <- lapply(model_names, function(x) {
   {models[[x]][["fit_summary"]] %>% 
       filter(str_detect(.$var, "sat")) %>%
       mutate(id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
-      select(id, mean, sd) %>%
+      rename(lo = `16%`,
+             mi = `50%`,
+             hi = `84%`) %>%
+      select(id, lo, mi, hi) %>%
       left_join(dd_sum %>%
                   select(time, midge) %>%
                   mutate(id = row_number())) %>%
@@ -205,10 +211,14 @@ p2 <- sats %>%
   mutate(midge = midge + 
            ifelse(model == "both.rds",  - 0.15, 0) + 
            ifelse(model == "midge_b.rds",  + 0.15, 0)) %>%
-  ggplot(aes(midge, mean, color = Model))+
+  ggplot(aes(midge, mi, color = Model))+
   facet_wrap(~Day, nrow = 2, labeller=label_parsed)+
-  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0, size = 0.5)+
+  geom_hline(yintercept = 80, size = 0.1)+
   geom_line(size = 0.5)+
+  geom_errorbar(aes(ymin = lo, 
+                    ymax = hi), 
+                width = 0, 
+                size = 0.5)+
   geom_point(aes(fill = Model), 
              size = 1.75, 
              shape = 21, 
@@ -219,7 +229,8 @@ p2 <- sats %>%
                      breaks = c(0, 1),
                      labels = c("Sieved","Intact"))+
   scale_y_continuous(expression("Half saturation ("*mu*mol~photons~m^{-2}~s^{-1}*")"), 
-                     breaks=c(40,100, 160), limits=c(0,200))+
+                     breaks=c(20, 80, 140), 
+                     limits=c(0,160))+
   scale_color_manual("",
                      values = c("firebrick","dodgerblue","goldenrod2"),
                      labels = c(bquote(beta),
@@ -239,7 +250,7 @@ p2 <- sats %>%
 
 p2
 # ggsave(file = "analysis/figures/fig_2.pdf",
-#           width = 2.5, height = 4)
+#           width = 3.5, height = 4.5)
 
 
 
@@ -264,7 +275,7 @@ ben_par <- sonde %>%
          pcyv_z = s * pcyv_z) %>%
   gather(var, val, pcyv_z, par)
 
-mean_sat <- test <- extract(models[["midge_a.rds"]]$fit, pars = "sat")$sat %>%
+mean_sat <- extract(models[["midge_a.rds"]]$fit, pars = "sat")$sat %>%
   as_tibble() %>%
   mutate(step = row_number()) %>%
   gather(id, val, -step) %>%
@@ -277,17 +288,18 @@ mean_sat <- test <- extract(models[["midge_a.rds"]]$fit, pars = "sat")$sat %>%
   group_by(step, midge) %>%
   summarize(val = mean(val)) %>%
   group_by(midge) %>%
-  summarize(sd = sd(val),
-            sat = mean(val)) %>%
-  expand(nesting(sat, sd, midge), yday = c(150,230)) %>%
+  summarize(lo = quantile(val, probs = 0.16),
+            mi = median(val),
+            hi = quantile(val, probs = 0.84)) %>%
+  expand(nesting(midge, lo, mi, hi), yday = c(150,230)) %>%
   mutate(label = factor(midge, levels = c(0,1), 
                         labels = c("Sieved","Intact")))
 
 p3 <- ben_par %>%
   ggplot(aes(x = yday))+
   geom_ribbon(data = mean_sat,
-              aes(ymin = sat - sd,
-                  ymax = sat + sd,
+              aes(ymin = lo,
+                  ymax = hi,
                   group = midge),
               alpha = 0.3, 
               fill = "dodgerblue")+
@@ -305,7 +317,7 @@ p3 <- ben_par %>%
                                 "Phycocyanin"))+
   geom_text(data = mean_sat,
             aes(x = 147, 
-                y = sat, 
+                y = mi, 
                 label = label),
             angle = 90,
             size = 2.8)+
@@ -330,6 +342,69 @@ p3
 
 
 
+# extract model fit
+est_sum <- lapply(model_names, function(x) {
+  {models[[x]][["fit_summary"]] %>% 
+      filter(str_detect(.$var, "coef")) %>%
+      unique() %>%
+      mutate(model = x)}
+}
+) %>%
+  bind_rows() %>%
+  mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
+         name = factor(name, levels = c("coef_b","coef_a","coef_r"),
+                       labels = c("beta","alpha","rho")), 
+         id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
+  full_join(model_lab)
+
+p4 <- est_sum  %>%
+  filter(name != "rho",
+         model != "none.rds",
+         id > 2) %>%
+  mutate(id = id + 
+           ifelse(model == "both.rds",  - 0.15, 0) + 
+           ifelse(model == "midge_b.rds",  + 0.15, 0)) %>%
+  ggplot(aes(id, `50%`, color = Model))+
+  facet_wrap(~name, nrow = 3, labeller=label_parsed)+
+  geom_hline(yintercept = 0, size = 0.1)+
+  geom_errorbar(aes(ymin = `16%`, ymax = `84%`), width = 0, size = 0.5)+
+  geom_point(aes(fill = Model), 
+             size = 1.75, 
+             shape = 21, 
+             color = "black",
+             stroke = 0.3)+
+  scale_color_manual("",
+                     values = c("firebrick","dodgerblue","goldenrod2","gray50"),
+                     labels = c(bquote(beta),
+                                bquote(alpha),
+                                bquote(beta~and~alpha),
+                                bquote(neither)))+
+  scale_fill_manual("",
+                     values = c("firebrick","dodgerblue","goldenrod2","gray50"),
+                     labels = c(bquote(beta),
+                                bquote(alpha),
+                                bquote(beta~and~alpha),
+                                bquote(neither)))+
+  scale_y_continuous("Estimate")+
+  scale_x_reverse("",
+                     breaks = c(1:4), 
+                     labels = c("intercept","time","sed","sed x time"))+
+  coord_flip(ylim = c(-1.75,1.75))+
+  theme(legend.position = c(0.85,0.85) ,
+        legend.text = element_text(margin = margin(l = -6)),
+        legend.key.size = unit(0.9, "lines"),
+        legend.spacing.y = unit(0, "lines"),
+        panel.border = element_rect(size = 0.25),
+        axis.text.y = element_text(angle = 90, vjust = 0.5, hjust=0.5),
+        panel.spacing.y = unit(1, "lines"))+
+  guides(color = guide_legend(override.aes = list(size = 2, linetype = 0)))
+p4
+# ggsave(file = "analysis/figures/fig_4.pdf",
+#           width = 3.5, height = 4.5)
+
+
+
+
 
 test %>% filter(step == 1)
 test %>%
@@ -344,46 +419,7 @@ test %>%
 
 
 
-sat_est <- lapply(model_names, function(x) {
-  t(as.matrix(extract(models[[x]][["fit"]], pars = "sat")[[1]])) %>%
-    as_tibble() %>%
-    mutate(id = row_number()) %>%
-    left_join(dd_sum %>%
-                mutate(id = row_number()) %>%
-                select(id, time, midge)) %>%
-    gather(var, val, -id, -time, -midge) %>%
-    select(-id) %>%
-    unique() %>%
-    mutate(model = x)
-  # {models[[x]][["fit"]] %>% 
-  #     filter(str_detect(.$var, "sat")) %>%
-  #     mutate(id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
-  #     select(id, mean, sd) %>%
-  #     left_join(dd_sum %>%
-  #                 select(time, midge) %>%
-  #                 mutate(id = row_number())) %>%
-  #     select(-id) %>%
-  #     unique() %>%
-  #     mutate(model = x)}
-}
-) %>%
-  bind_rows()
-sat_est %>%
-  filter(model != "none.rds") %>%
-  spread(midge, val) %>%
-  mutate(effect = `1` - `0`) %>%
-  group_by(model, time) %>%
-  summarize(se = sd(effect),
-            effect = mean(effect)) %>%
-  ungroup() %>%
-  ggplot(aes(model, effect, color = model))+
-  facet_wrap(~time)+
-  geom_point(size = 3)+
-  geom_errorbar(aes(ymin = effect - se, 
-                    ymax = effect + se), width = 0)+
-  geom_hline(yintercept = 0)+
-  scale_color_manual(values = c("goldenrod","dodgerblue","firebrick"),
-                     guide = F)
+
   
 
 
@@ -413,7 +449,7 @@ comp = {loo_compare(loo_list[[1]],
                     loo_list[[4]]) %>%
     as_tibble() %>%
     as.matrix() %>%
-    as.tibble() %>%
+    as_tibble() %>%
     mutate(model = model_names[as.numeric(rownames(.))])} %>%
   select(model, looic) %>%
   mutate(loo_dev = round(looic - looic[1], 1))
