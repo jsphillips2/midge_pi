@@ -96,7 +96,7 @@ transformed parameters {
     a[n] = exp(dot_product(coef_a, x_a[n,]));
     r[n] = exp(dot_product(coef_r, x_r[n,]));
     gpp_z[n] = b[n] * tanh((a[n] / b[n]) * l[n]);
-    nep_z[n] = b[n] * tanh((a[n] / b[n]) * l[n]) - r[n];
+    nep_z[n] = gpp_z[n] - r[n];
     y_pred[n] = nep_z[n] - mu / tau + sig_ran * ran[core[n]];
   }
   
