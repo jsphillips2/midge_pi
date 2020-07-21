@@ -22,9 +22,9 @@ I modeled the effects of sediment treatment and experimental day as
 %
 \begin{equation} \label{eq:lm}
 \begin{split}
-\text{log}(\beta_i) &\sim 1 + \text{day}_i \times \text{treatment}_i \\
-\text{log}(\alpha_i) &\sim 1 + \text{day}_i \times \text{treatment}_i \\
-\text{log}(\rho_i) &\sim 1 + \text{day}_i \times \text{treatment}_i
+\text{log}(\beta_i) &\sim 1 + \text{day}_i \times \text{sediment}_i \\
+\text{log}(\alpha_i) &\sim 1 + \text{day}_i \times \text{sediment}_i \\
+\text{log}(\rho_i) &\sim 1 + \text{day}_i \times \text{sediment}_i
 \end{split}
 \end{equation}
 %
@@ -40,8 +40,10 @@ model estimates were then back-scaled accordingly.
 I fit the model with Bayesin approach using Stan \citep{carpenter2017}
 run from R using the ``rstan'' package \citep{stan2018} in R 4.0.0 \citep{r}.
 The model was specified with Guassian(0, 1) priors for the linear predictor coefficients  
-and Gamma(1.5, 3) priors for residual standard deviations \citep{chung2015};
-these priors were weakly-informative relative to the scale of the standardized data.
+and Gamma(1.5, 3) priors for residual standard deviations \citep{chung2015}.
+I fit the models with 6 chains of 4000 iterations each (including "warm-up")
+and assessed convergence with the potential scale reduction factor (\^{R}),
+effective sample size, and number of divergent transitions.
 
 To assess ecosystem engineering effects on different aspects primary production, 
 I compared the full model to reduced versions 
