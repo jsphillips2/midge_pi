@@ -5,6 +5,7 @@
 # load packages
 library(tidyverse)
 library(rstan)
+library(loo)
 source("analysis/model_fn.R")
 
 # stan settings
@@ -275,7 +276,7 @@ ben_par <- sonde %>%
          pcyv_z = s * pcyv_z) %>%
   gather(var, val, pcyv_z, par)
 
-mean_sat <- extract(models[["midge_a.rds"]]$fit, pars = "sat")$sat %>%
+full_sat <- extract(models[["midge_a.rds"]]$fit, pars = "sat")$sat %>%
   as_tibble() %>%
   mutate(step = row_number()) %>%
   gather(id, val, -step) %>%
@@ -287,6 +288,9 @@ mean_sat <- extract(models[["midge_a.rds"]]$fit, pars = "sat")$sat %>%
   summarize(val = unique(val)) %>%
   group_by(step, midge) %>%
   summarize(val = mean(val)) %>%
+  ungroup()
+  
+mean_sat <- full_sat %>%
   group_by(midge) %>%
   summarize(lo = quantile(val, probs = 0.16),
             mi = median(val),
@@ -334,15 +338,25 @@ p3
 #           width = 3.5, height = 2.75)
   
 
+comp_fn <- function(val1_, val2_) {mean(val2_ > val1_)}
+full_sat %>%
+  group_by(midge, step) %>%
+  mutate(val = comp_fn(val, ben_par$val)) %>%
+  group_by(midge) %>%
+  summarize(lo = round(quantile(val, probs = 0.16), 2),
+            mi = round(median(val), 2),
+            hi = round(quantile(val, probs = 0.84), 2))
+  
 
 
 
 
+#==========
+#========== Inferences
+#==========
 
 
-
-
-# extract model fit
+# extract coefficients
 est_sum <- lapply(model_names, function(x) {
   {models[[x]][["fit_summary"]] %>% 
       filter(str_detect(.$var, "coef")) %>%
@@ -357,73 +371,20 @@ est_sum <- lapply(model_names, function(x) {
          id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
   full_join(model_lab)
 
-p4 <- est_sum  %>%
+
+
+# summarize
+est_sum_sub <- est_sum  %>%
   filter(name != "rho",
-         model != "none.rds",
-         id > 2) %>%
-  mutate(id = id + 
-           ifelse(model == "both.rds",  - 0.15, 0) + 
-           ifelse(model == "midge_b.rds",  + 0.15, 0)) %>%
-  ggplot(aes(id, `50%`, color = Model))+
-  facet_wrap(~name, nrow = 3, labeller=label_parsed)+
-  geom_hline(yintercept = 0, size = 0.1)+
-  geom_errorbar(aes(ymin = `16%`, ymax = `84%`), width = 0, size = 0.5)+
-  geom_point(aes(fill = Model), 
-             size = 1.75, 
-             shape = 21, 
-             color = "black",
-             stroke = 0.3)+
-  scale_color_manual("",
-                     values = c("firebrick","dodgerblue","goldenrod2","gray50"),
-                     labels = c(bquote(beta),
-                                bquote(alpha),
-                                bquote(beta~and~alpha),
-                                bquote(neither)))+
-  scale_fill_manual("",
-                     values = c("firebrick","dodgerblue","goldenrod2","gray50"),
-                     labels = c(bquote(beta),
-                                bquote(alpha),
-                                bquote(beta~and~alpha),
-                                bquote(neither)))+
-  scale_y_continuous("Estimate")+
-  scale_x_reverse("",
-                     breaks = c(1:4), 
-                     labels = c("intercept","time","sed","sed x time"))+
-  coord_flip(ylim = c(-1.75,1.75))+
-  theme(legend.position = c(0.85,0.85) ,
-        legend.text = element_text(margin = margin(l = -6)),
-        legend.key.size = unit(0.9, "lines"),
-        legend.spacing.y = unit(0, "lines"),
-        panel.border = element_rect(size = 0.25),
-        axis.text.y = element_text(angle = 90, vjust = 0.5, hjust=0.5),
-        panel.spacing.y = unit(1, "lines"))+
-  guides(color = guide_legend(override.aes = list(size = 2, linetype = 0)))
-p4
-# ggsave(file = "analysis/figures/fig_4.pdf",
-#           width = 3.5, height = 4.5)
+         id > 1) %>%
+  mutate(est = paste0(round(`50%`, 1)," ", 
+                      "(", round(`16%`,1) ,",",
+                      "",round(`84%`,1),")"),
+         effect = c("day","sediment","sediment x day")[id - 1]) %>%
+  select(model, name, effect, est) %>%
+  spread(effect, est)
 
 
-
-
-
-test %>% filter(step == 1)
-test %>%
-  group_by(id) %>%
-  summarize(l = length(val))
-
-  select(-id) %>%
-  unique() %>%
-  group_by(midge) %>%
-  summarize(sat = mean(val),
-            sd = sd(val))
-
-
-
-
-  
-
-
-library(loo)
 
 # function for LOOIC
 loo_fn <- function(x){
@@ -438,11 +399,15 @@ loo_fn <- function(x){
 
 
 
+# apply LOO
 loo_list <- lapply(model_names, function(x) {
   models[[x]][["fit"]] %>% loo_fn
 }
 )
 
+
+
+# compare models
 comp = {loo_compare(loo_list[[1]],
                     loo_list[[2]],
                     loo_list[[3]],
@@ -456,3 +421,13 @@ comp = {loo_compare(loo_list[[1]],
   
 
 
+est_sum_sub %>%
+  full_join(expand(est_sum, model, name)) %>%
+  filter(name != "rho") %>%
+  arrange(model, name) %>%
+  full_join(comp %>%
+              select(model, loo_dev)) %>% 
+  group_by(model) %>%
+  mutate(loo_dev = c(loo_dev[1], NA)) %>%
+  select(model, loo_dev, name, day, sediment, `sediment x day`) %>%
+  knitr::kable(format = "latex")
