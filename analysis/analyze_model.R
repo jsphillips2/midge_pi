@@ -341,7 +341,7 @@ p3
 comp_fn <- function(val1_, val2_) {mean(val2_ > val1_)}
 full_sat %>%
   group_by(midge, step) %>%
-  mutate(val = comp_fn(val, ben_par$val)) %>%
+  mutate(val = comp_fn(val, {ben_par %>% filter(var == "par")}$val)) %>%
   group_by(midge) %>%
   summarize(lo = round(quantile(val, probs = 0.16), 2),
             mi = round(median(val), 2),
@@ -431,3 +431,160 @@ est_sum_sub %>%
   mutate(loo_dev = c(loo_dev[1], NA)) %>%
   select(model, loo_dev, name, day, sediment, `sediment x day`) %>%
   knitr::kable(format = "latex")
+
+
+
+
+
+
+tau <- sd(dd$rateo2)
+eta <- mean(dd$par)
+
+beta_sum <- lapply(model_names, function(x) {
+  {models[[x]][["fit_summary"]] %>% 
+      filter(str_detect(.$var, "b"),
+             !str_detect(.$var, "coef_b")) %>%
+      unique() %>%
+      mutate(model = x)}
+}
+) %>%
+  bind_rows() %>%
+  mutate(id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
+  full_join(dd %>%
+              mutate(id = row_number())) %>%
+  select(model, time, midge, `16%`, `50%`, `84%`) %>%
+  unique() %>%
+  mutate(`16%` = 1000 * tau * `16%`, 
+         `50%` = 1000 * tau * `50%`, 
+         `84%` = 1000 * tau * `84%`,
+         group = factor(paste0(time, midge),
+                        levels = c("00","01","10","11"),
+                        labels = c("Day 3, Sieved",
+                                   "Day 3, Intact",
+                                   "Day 15, Sieved",
+                                   "Day 15, Intact")))
+
+beta_sum %>%
+  mutate(est = paste0(round(`50%`, 0)," ", 
+                      "(", round(`16%`,0) ,",",
+                      "",round(`84%`,0),")")) %>%
+  select(model, group, est) %>%
+  spread(group, est) %>%
+  knitr::kable(format = "latex")
+
+
+
+
+alpha_sum <- lapply(model_names, function(x) {
+  {models[[x]][["fit_summary"]] %>% 
+      filter(str_detect(.$var, "a\\["),
+             !str_detect(.$var, "coef_a")) %>%
+      unique() %>%
+      mutate(model = x)}
+}
+) %>%
+  bind_rows() %>%
+  mutate(id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
+  full_join(dd %>%
+              mutate(id = row_number())) %>%
+  select(model, time, midge, `16%`, `50%`, `84%`) %>%
+  unique() %>%
+  mutate(`16%` = 1000 * tau * `16%` / eta, 
+         `50%` = 1000 * tau * `50%` / eta, 
+         `84%` = 1000 * tau * `84%` / eta,
+         group = factor(paste0(time, midge),
+                        levels = c("00","01","10","11"),
+                        labels = c("Day 3, Sieved",
+                                   "Day 3, Intact",
+                                   "Day 15, Sieved",
+                                   "Day 15, Intact"))) 
+
+alpha_sum %>%
+  mutate(est = paste0(round(`50%`, 1)," ", 
+                      "(", round(`16%`,1) ,",",
+                      "",round(`84%`,1),")")) %>%
+  select(model, group, est) %>%
+  spread(group, est) %>%
+  knitr::kable(format = "latex")
+
+
+
+
+rho_sum <- lapply(model_names, function(x) {
+  {models[[x]][["fit_summary"]] %>% 
+      filter(str_detect(.$var, "r\\["),
+             !str_detect(.$var, "coef_r"),
+             !str_detect(.$var, "er")) %>%
+      unique() %>%
+      mutate(model = x)}
+}
+) %>%
+  bind_rows() %>%
+  mutate(id = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2]))) %>%
+  full_join(dd %>%
+              mutate(id = row_number())) %>%
+  select(model, time, midge, `16%`, `50%`, `84%`) %>%
+  unique() %>%
+  mutate(`16%` = 1000 * tau * `16%`, 
+         `50%` = 1000 * tau * `50%`, 
+         `84%` = 1000 * tau * `84%`,
+         group = factor(paste0(time, midge),
+                        levels = c("00","01","10","11"),
+                        labels = c("Day 3, Sieved",
+                                   "Day 3, Intact",
+                                   "Day 15, Sieved",
+                                   "Day 15, Intact"))) 
+
+rho_sum %>%
+  mutate(est = paste0(round(`50%`, 0)," ", 
+                      "(", round(`16%`,0) ,",",
+                      "",round(`84%`,0),")")) %>%
+  select(model, group, est) %>%
+  spread(group, est) %>% 
+  knitr::kable(format = "latex")
+
+
+
+
+
+
+
+
+
+
+beta_sum %>%
+  mutate(name = "beta") %>%
+  bind_rows(alpha_sum %>%
+              mutate(name = "alpha")) %>%
+  full_join(midge_lab) %>%
+  full_join(day_lab) %>% 
+  full_join(model_lab) %>%
+  ggplot(aes(group, `50%`))+
+  facet_wrap(~name, scales = "free_y", 
+             labeller=label_parsed,
+             nrow = 2)+
+  geom_line(size = 0.5,
+            aes(group = interaction(Model, Day),
+                color = Model))+
+  geom_errorbar(aes(ymin = `16%`, 
+                    ymax = `84%`,
+                    color = Model), 
+                width = 0, 
+                size = 0.5)+
+  geom_point(aes(fill = Model), 
+             size = 1.75, 
+             shape = 21, 
+             color = "black",
+             stroke = 0.3)+
+  scale_color_manual("",
+                     values = c("firebrick","dodgerblue","goldenrod2","gray50"),
+                     labels = c(bquote(beta),
+                                bquote(alpha),
+                                bquote(beta~and~alpha),
+                                bquote("neither")))+
+  scale_fill_manual("",
+                    values = c("firebrick","dodgerblue","goldenrod2","gray50"),
+                    labels = c(bquote(beta),
+                               bquote(alpha),
+                               bquote(beta~and~alpha),
+                               bquote("neither")))
