@@ -33,6 +33,7 @@ data {
 
 
 transformed data {
+  
   // Declare variables
   real mu; // mean observed DO flux
   real<lower=0> tau; // sd observed DO flux
@@ -52,7 +53,7 @@ transformed data {
     l[n] = par[n]/eta;
   }
   
-  // Scale variables for summary
+  // Scale variables for fitted curves
   for (n in 1:n_sum) {
    l_sum[n] = par_sum[n]/eta; 
   }
@@ -145,7 +146,7 @@ generated quantities {
     nep[n] = tau * nep_z[n];
   }
   
-  // Calculate summarized
+  // Calculate fitted curves
   {
     real b_t;
     real a_t;
