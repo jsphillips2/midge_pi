@@ -11,11 +11,11 @@ source("analysis/model_fn.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
-# load data
-data = read_csv("data/metabolism_2015.csv")
+# import data
+data <- read_csv("data/metabolism_2015.csv")
 
 # process data
-dd = data %>%
+dd <- data %>%
   filter(trial=="a") %>%
   mutate(
     rateo2 = 15*(do_f - do_i)/(100*duration), 
@@ -49,7 +49,7 @@ dd_sum <- dd %>%
 
 # model form
 forms <- c("both","midge_b","midge_a","none")
-form <- forms[4]
+form <- forms[1]
 if(form == "both") {b = formula(~ 1 + time * midge)
                     a = formula(~ 1 + time * midge)
                     r = formula(~ 1 + time * midge)}
@@ -72,8 +72,8 @@ data_list <- model_fn(b_ = b,
                       dd_sum_ = dd_sum)
 
 # MCMC specifications
-chains <- 4
-iter <- 2000
+chains <- 6
+iter <- 4000
 adapt_delta <- 0.9
 max_treedepth <- 10
 
@@ -95,5 +95,5 @@ write_rds(list(b = b,
 			   data_list = data_list,
                fit = fit, 
                fit_summary = fit_summary),
-           paste0("analysis/model_fit/",form,".rds"))
+           paste0("analysis/model_fit_ii/",form,".rds"))
 
